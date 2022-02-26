@@ -1,8 +1,9 @@
-import { getAllProjects, getProjectById, getAllDivergencePointsByMapId, getCommentsGroupedByQuestionReport } from "./strateegia-api.js";
+import { getAllProjects, getProjectById, getAllDivergencePointsByMapId, getCommentsGroupedByQuestionReport, createParentComment, createReplyComment } from "./strateegia-api.js";
 
 let users = [];
 const accessToken = localStorage.getItem("strateegiaAccessToken");
 let intervalCheck = "inactive";
+const CHECK_INTERVAL = 1000;
 
 export async function initializeProjectList() {
     const labs = await getAllProjects(accessToken)
@@ -111,7 +112,7 @@ async function setSelectedDivPoint(divPointId) {
     // intervalCheck = setInterval(() => {periodicCheck(divPointId)}, 5000);
 }
 
-function initializePeriodicCheckButtonControls() {
+async function initializePeriodicCheckButtonControls() {
     let button = d3.select("#periodic-check-button");
     button.text("iniciar checagem periódica");
     button.classed("btn-outline-success", true);
@@ -122,13 +123,24 @@ function initializePeriodicCheckButtonControls() {
             stopPeriodicCheck();
         }
     });
+    let sendComment = d3.select("#post-comment-test");
+    sendComment.on("click", () => {
+        // let comment = d3.select("#comment-text").property("value");
+        // console.log(comment);
+        let comment = "Não sei se entendi isso assim."
+        const questionId = "d24ba89e-2131-43d6-afa2-800ae3dfdcdf";
+        const divPointId = "61f2aa932a0271235e71b342";
+
+        const response = createParentComment(accessToken, divPointId, questionId, comment);
+        console.log(response);
+    });
 }
 
 function startPeriodicCheck() {
     let button = d3.select("#periodic-check-button");
     let selectedDivPoint = localStorage.getItem("selectedDivPoint");
     if (selectedDivPoint !== null && selectedDivPoint !== "null") {
-        intervalCheck = setInterval(() => { periodicCheck(selectedDivPoint) }, 500);
+        intervalCheck = setInterval(() => { periodicCheck(selectedDivPoint) }, CHECK_INTERVAL);
 
         button.text("parar checagem periódica");
         button.classed("btn-outline-success", false);
@@ -150,6 +162,7 @@ function stopPeriodicCheck() {
 async function periodicCheck(divPointId) {
     console.log(`periodicCheck(): ${divPointId}`);
     statusUpdate();
+    checkParentComments(divPointId);
 }
 
 function statusUpdate() {
@@ -158,4 +171,32 @@ function statusUpdate() {
     let currentTime = new Date();
     let currentTimeFormatted = d3.timeFormat("%d/%m/%Y %H:%M:%S")(currentTime);
     statusOutput.text("última checagem: " + currentTimeFormatted);
+}
+
+async function checkParentComments(divPointId) {
+    const questionReport = await getCommentsGroupedByQuestionReport(accessToken, divPointId);
+    questionReport.forEach(question => {
+        const questionId = question.id;
+        if (question.comments.length > 0) {
+            question.comments.forEach(comment => {
+                if (comment.reply_count === 0) {
+                    console.log(`${comment.id}: ninguém fez comentários para essa resposta`);
+                    createReplyComment(accessToken, comment.id, randomComment());
+                }
+            });
+        }
+    });
+    console.log(questionReport);
+}
+
+function randomComment() {
+    let comments = [
+        "você poderia detalhar um pouco mais sua resposta?",
+        "daria para explicar um pouco mais?",
+        "se der, fala mais um pouco sobre sua resposta?",
+        "tu poderia dar mais detalhes sobre tua resposta?",
+        "humm, fiquei com algumas dúvidas sobre sua resposta, poderia dar mais detalhes?",
+    ];
+    let randomIndex = Math.floor(Math.random() * comments.length);
+    return comments[randomIndex];
 }
