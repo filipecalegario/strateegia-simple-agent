@@ -36,6 +36,7 @@ export async function initializeProjectList() {
         localStorage.setItem("selectedProject", selectedProject);
         console.log(selectedProject);
         updateMapList(selectedProject);
+        stopPeriodicCheck();
     });
 
     localStorage.setItem("selectedProject", listProjects[0].id);
@@ -65,6 +66,7 @@ async function updateMapList(selectedProject) {
         localStorage.setItem("selectedMap", selectedMap);
         console.log(selectedMap);
         updateDivPointList(selectedMap);
+        stopPeriodicCheck();
     });
 
     const mapId = project.maps[0].id;
@@ -85,6 +87,7 @@ async function updateDivPointList(selectedMap) {
             options.on("change", () => {
                 let selectedDivPoint = d3.select("#divpoints-list").property("value");
                 setSelectedDivPoint(selectedDivPoint);
+                stopPeriodicCheck();
             });
 
             let initialSelectedDivPoint = map.content[0].id;
@@ -114,35 +117,34 @@ function initializePeriodicCheckButtonControls() {
     button.classed("btn-outline-success", true);
     button.on("click", () => {
         if (intervalCheck == "") {
-            let selectedDivPoint = localStorage.getItem("selectedDivPoint");
-            if (selectedDivPoint !== null && selectedDivPoint !== "null") {
-                intervalCheck = setInterval(() => { periodicCheck(selectedDivPoint) }, 500);
-
-                button.text("parar checagem periódica");
-                button.classed("btn-outline-success", false);
-                button.classed("btn-outline-danger", true);
-            } else {
-                console.log("Não há ponto de divergência selecionado");
-            }
+            startPeriodicCheck();
         } else {
-            clearInterval(intervalCheck);
-            intervalCheck = "";
-            button.text("iniciar checagem periódica");
-            button.classed("btn-outline-success", true);
-            button.classed("btn-outline-danger", false);
+            stopPeriodicCheck();
         }
     });
 }
 
 function startPeriodicCheck() {
+    let button = d3.select("#periodic-check-button");
     let selectedDivPoint = localStorage.getItem("selectedDivPoint");
-    if (selectedDivPoint != null) {
+    if (selectedDivPoint !== null && selectedDivPoint !== "null") {
         intervalCheck = setInterval(() => { periodicCheck(selectedDivPoint) }, 500);
+
+        button.text("parar checagem periódica");
+        button.classed("btn-outline-success", false);
+        button.classed("btn-outline-danger", true);
+    } else {
+        console.log("Não há ponto de divergência selecionado");
     }
 }
 
 function stopPeriodicCheck() {
+    let button = d3.select("#periodic-check-button");
     clearInterval(intervalCheck);
+    intervalCheck = "";
+    button.text("iniciar checagem periódica");
+    button.classed("btn-outline-success", true);
+    button.classed("btn-outline-danger", false);
 }
 
 async function periodicCheck(divPointId) {
