@@ -2,7 +2,7 @@ import { getAllProjects, getProjectById, getAllDivergencePointsByMapId, getComme
 
 let users = [];
 const accessToken = localStorage.getItem("strateegiaAccessToken");
-let intervalCheck = "";
+let intervalCheck = "inactive";
 
 export async function initializeProjectList() {
     const labs = await getAllProjects(accessToken)
@@ -116,7 +116,7 @@ function initializePeriodicCheckButtonControls() {
     button.text("iniciar checagem periódica");
     button.classed("btn-outline-success", true);
     button.on("click", () => {
-        if (intervalCheck == "") {
+        if (intervalCheck == "inactive") {
             startPeriodicCheck();
         } else {
             stopPeriodicCheck();
@@ -141,7 +141,7 @@ function startPeriodicCheck() {
 function stopPeriodicCheck() {
     let button = d3.select("#periodic-check-button");
     clearInterval(intervalCheck);
-    intervalCheck = "";
+    intervalCheck = "inactive";
     button.text("iniciar checagem periódica");
     button.classed("btn-outline-success", true);
     button.classed("btn-outline-danger", false);
@@ -149,7 +149,12 @@ function stopPeriodicCheck() {
 
 async function periodicCheck(divPointId) {
     console.log(`periodicCheck(): ${divPointId}`);
+    statusUpdate();
+}
+
+function statusUpdate() {
     let statusOutput = d3.select("#periodic-check-status");
+    statusOutput.classed("alert alert-secondary", true);
     let currentTime = new Date();
     let currentTimeFormatted = d3.timeFormat("%d/%m/%Y %H:%M:%S")(currentTime);
     statusOutput.text("última checagem: " + currentTimeFormatted);
