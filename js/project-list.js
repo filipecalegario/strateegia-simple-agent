@@ -2,6 +2,7 @@ import { getAllProjects, getProjectById, getAllDivergencePointsByMapId, getComme
 
 let users = [];
 const accessToken = localStorage.getItem("strateegiaAccessToken");
+let intervalCheck = "";
 
 export async function initializeProjectList() {
     const labs = await getAllProjects(accessToken)
@@ -39,6 +40,8 @@ export async function initializeProjectList() {
 
     localStorage.setItem("selectedProject", listProjects[0].id);
     updateMapList(listProjects[0].id);
+
+    initializePeriodicCheckButtonControls();
 }
 
 async function updateMapList(selectedProject) {
@@ -49,7 +52,7 @@ async function updateMapList(selectedProject) {
     project.users.forEach(user => {
         users.push({ id: user.id, name: user.name });
     });
-    
+
     localStorage.setItem("users", JSON.stringify(users));
 
     let options = d3.select("#maps-list");
@@ -88,6 +91,7 @@ async function updateDivPointList(selectedMap) {
             setSelectedDivPoint(initialSelectedDivPoint);
         } else {
             console.log("Não há pontos de divergência associados ao mapa selecionado");
+            localStorage.setItem("selectedDivPoint", null);
         }
     });
 }
@@ -95,10 +99,52 @@ async function updateDivPointList(selectedMap) {
 async function setSelectedDivPoint(divPointId) {
     localStorage.setItem("selectedDivPoint", divPointId);
     const questions = await getCommentsGroupedByQuestionReport(accessToken, divPointId);
-    
+
     if (questions.length > 0) {
         console.log(questions);
     } else {
         console.log("Não há respostas associadas ao ponto de divergência selecionado");
     }
+    // intervalCheck = setInterval(() => {periodicCheck(divPointId)}, 5000);
+}
+
+function initializePeriodicCheckButtonControls() {
+    let button = d3.select("#periodic-check-button");
+    button.text("iniciar checagem periódica");
+    button.classed("btn-outline-success", true);
+    button.on("click", () => {
+        if (intervalCheck == "") {
+            let selectedDivPoint = localStorage.getItem("selectedDivPoint");
+            if (selectedDivPoint !== null && selectedDivPoint !== "null") {
+                intervalCheck = setInterval(() => { periodicCheck(selectedDivPoint) }, 500);
+
+                button.text("parar checagem periódica");
+                button.classed("btn-outline-success", false);
+                button.classed("btn-outline-danger", true);
+            } else {
+                console.log("Não há ponto de divergência selecionado");
+            }
+        } else {
+            clearInterval(intervalCheck);
+            intervalCheck = "";
+            button.text("iniciar checagem periódica");
+            button.classed("btn-outline-success", true);
+            button.classed("btn-outline-danger", false);
+        }
+    });
+}
+
+function startPeriodicCheck() {
+    let selectedDivPoint = localStorage.getItem("selectedDivPoint");
+    if (selectedDivPoint != null) {
+        intervalCheck = setInterval(() => { periodicCheck(selectedDivPoint) }, 500);
+    }
+}
+
+function stopPeriodicCheck() {
+    clearInterval(intervalCheck);
+}
+
+async function periodicCheck(divPointId) {
+    console.log(`periodicCheck(): ${divPointId}`);
 }
