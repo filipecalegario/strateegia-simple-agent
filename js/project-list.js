@@ -1,4 +1,4 @@
-import { getAllProjects, getProjectById, getAllDivergencePointsByMapId, getCommentsGroupedByQuestionReport, createParentComment, createReplyComment } from "./strateegia-api.js";
+import { getAllProjects, getProjectById, getAllDivergencePointsByMapId, getCommentsGroupedByQuestionReport, createParentComment, createReplyComment, getUser } from "./strateegia-api.js";
 
 let users = [];
 const accessToken = localStorage.getItem("strateegiaAccessToken");
@@ -6,24 +6,34 @@ let intervalCheck = "inactive";
 const CHECK_INTERVAL = 1000;
 
 export async function initializeProjectList() {
-    const labs = await getAllProjects(accessToken)
+    const labs = await getAllProjects(accessToken);
     console.log("getAllProjects()");
     console.log(labs);
+    const user = await getUser(accessToken);
+    localStorage.setItem("userId", user.id);
     let listProjects = [];
     for (let i = 0; i < labs.length; i++) {
         let currentLab = labs[i];
         if (currentLab.lab.name == null) {
             currentLab.lab.name = "Personal";
         }
-        for (let j = 0; j < currentLab.projects.length; j++) {
-            const project = currentLab.projects[j];
+        for (let index = 0; index < currentLab.projects.length; index++) {
+            const project = currentLab.projects[index];
             const newProject = {
                 "id": project.id,
                 "title": project.title,
                 "lab_id": currentLab.lab.id,
                 "lab_title": currentLab.lab.name
             };
-            listProjects.push(newProject);
+            const projectMoreInfo = await getProjectById(accessToken, project.id);
+            // console.log(projectMoreInfo);
+            // const usersMap = projectMoreInfo.users.map(_user => {return {id:_user.id, roles:_user.project_roles}});
+            const foundUser = projectMoreInfo.users.find(_user => _user.id == user.id);
+            if (foundUser !== undefined) {
+                if (foundUser.project_roles.includes("ADMIN") || foundUser.project_roles.includes("MENTOR")) {
+                    listProjects.push(newProject);
+                }
+            }
         }
     }
 
@@ -196,6 +206,7 @@ function randomComment() {
         "se der, fala mais um pouco sobre sua resposta?",
         "tu poderia dar mais detalhes sobre tua resposta?",
         "humm, fiquei com algumas dúvidas sobre sua resposta, poderia dar mais detalhes?",
+        "dá um pouquinho mais de detalhes aqui, por favor.",
     ];
     let randomIndex = Math.floor(Math.random() * comments.length);
     return comments[randomIndex];
