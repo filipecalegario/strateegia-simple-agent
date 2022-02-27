@@ -26,8 +26,6 @@ export async function initializeProjectList() {
                 "lab_title": currentLab.lab.name
             };
             const projectMoreInfo = await getProjectById(accessToken, project.id);
-            // console.log(projectMoreInfo);
-            // const usersMap = projectMoreInfo.users.map(_user => {return {id:_user.id, roles:_user.project_roles}});
             const foundUser = projectMoreInfo.users.find(_user => _user.id == user.id);
             if (foundUser !== undefined) {
                 if (foundUser.project_roles.includes("ADMIN") || foundUser.project_roles.includes("MENTOR")) {
@@ -133,16 +131,10 @@ async function initializePeriodicCheckButtonControls() {
             stopPeriodicCheck();
         }
     });
-    let sendComment = d3.select("#post-comment-test");
-    sendComment.on("click", () => {
-        // let comment = d3.select("#comment-text").property("value");
-        // console.log(comment);
-        let comment = "Não sei se entendi isso assim."
-        const questionId = "d24ba89e-2131-43d6-afa2-800ae3dfdcdf";
-        const divPointId = "61f2aa932a0271235e71b342";
-
-        const response = createParentComment(accessToken, divPointId, questionId, comment);
-        console.log(response);
+    let intervals = d3.select("#intervals");
+    const intervalsOptions = [{ value: "1000", text: "1 segundo" }, { value: "5000", text: "5 segundos" }, { value: "10000", text: "10 segundos" }, { value: "15000", text: "15 segundos" }, { value: "30000", text: "30 segundos" }, { value: "60000", text: "1 minuto" }, { value: "120000", text: "2 minutos" }, { value: "300000", text: "5 minutos" }, { value: "600000", text: "10 minutos" }, { value: "1800000", text: "30 minutos" }, { value: "3600000", text: "1 hora" }];
+    intervalsOptions.forEach(function (interval) {
+        intervals.append("option").attr("value", interval.value).text(interval.text).classed("dropdown-item", true);
     });
 }
 
@@ -150,7 +142,8 @@ function startPeriodicCheck() {
     let button = d3.select("#periodic-check-button");
     let selectedDivPoint = localStorage.getItem("selectedDivPoint");
     if (selectedDivPoint !== null && selectedDivPoint !== "null") {
-        intervalCheck = setInterval(() => { periodicCheck(selectedDivPoint) }, CHECK_INTERVAL);
+        const chosenInterval = d3.select("#intervals").property("value");
+        intervalCheck = setInterval(() => { periodicCheck(selectedDivPoint) }, chosenInterval);
 
         button.text("parar checagem periódica");
         button.classed("btn-outline-success", false);
