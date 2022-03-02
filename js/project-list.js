@@ -1,4 +1,4 @@
-import { getAllProjects, getProjectById, getAllDivergencePointsByMapId, getCommentsGroupedByQuestionReport, createParentComment, createReplyComment, getUser } from "./strateegia-api.js";
+import { getAllProjects, getProjectById, getAllDivergencePointsByMapId, getCommentsGroupedByQuestionReport, createParentComment, createReplyComment, getUser, getSummaryProjectsByUser } from "./strateegia-api.js";
 
 let users = [];
 const accessToken = localStorage.getItem("strateegiaAccessToken");
@@ -6,39 +6,50 @@ let intervalCheck = "inactive";
 const CHECK_INTERVAL = 1000;
 
 export async function initializeProjectList() {
-    const labs = await getAllProjects(accessToken);
-    console.log("getAllProjects()");
-    console.log(labs);
-    const user = await getUser(accessToken);
-    localStorage.setItem("userId", user.id);
-    let listProjects = [];
-    for (let i = 0; i < labs.length; i++) {
-        let currentLab = labs[i];
-        if (currentLab.lab.name == null) {
-            currentLab.lab.name = "Personal";
+    // const labs = await getAllProjects(accessToken);
+    // console.log("getAllProjects()");
+    // console.log(labs);
+    // const user = await getUser(accessToken);
+    // localStorage.setItem("userId", user.id);
+    // let listProjects = [];
+    // for (let i = 0; i < labs.length; i++) {
+    //     let currentLab = labs[i];
+    //     if (currentLab.lab.name == null) {
+    //         currentLab.lab.name = "Personal";
+    //     }
+    //     for (let index = 0; index < currentLab.projects.length; index++) {
+    //         const project = currentLab.projects[index];
+    //         const newProject = {
+    //             "id": project.id,
+    //             "title": project.title,
+    //             "lab_id": currentLab.lab.id,
+    //             "lab_title": currentLab.lab.name
+    //         };
+    //         const projectMoreInfo = await getProjectById(accessToken, project.id);
+    //         const foundUser = projectMoreInfo.users.find(_user => _user.id == user.id);
+    //         if (foundUser !== undefined) {
+    //             if (foundUser.project_roles.includes("ADMIN") || foundUser.project_roles.includes("MENTOR")) {
+    //                 listProjects.push(newProject);
+    //             }
+    //         }
+    //     }
+    // }
+
+    const projectsSummary = await getSummaryProjectsByUser(accessToken);
+    console.log("getSummaryProjectsByUser()");
+    console.log(projectsSummary);
+    const listProjects = projectsSummary.content.map(project => {
+        if (project.lab.name == null) {
+            project.lab.name = "Personal";
         }
-        for (let index = 0; index < currentLab.projects.length; index++) {
-            const project = currentLab.projects[index];
-            const newProject = {
-                "id": project.id,
-                "title": project.title,
-                "lab_id": currentLab.lab.id,
-                "lab_title": currentLab.lab.name
-            };
-            const projectMoreInfo = await getProjectById(accessToken, project.id);
-            const foundUser = projectMoreInfo.users.find(_user => _user.id == user.id);
-            if (foundUser !== undefined) {
-                if (foundUser.project_roles.includes("ADMIN") || foundUser.project_roles.includes("MENTOR")) {
-                    listProjects.push(newProject);
-                }
-            }
-        }
-    }
+        return { id: project.id, title: project.title, labId: project.lab.id, labTitle: project.lab.name, roles: project.my_member_info.project_roles }
+    }).filter(project => project.roles.includes("ADMIN") || project.roles.includes("MENTOR"));
+    console.log(listProjects);
 
     let options = d3.select("#projects-list");
     options.selectAll('option').remove();
     listProjects.forEach(function (project) {
-        options.append('option').attr('value', project.id).text(`${project.lab_title} -> ${project.title}`);
+        options.append('option').attr('value', project.id).text(`${project.labTitle} -> ${project.title}`);
     });
     options.on("change", () => {
         let selectedProject = d3.select("#projects-list").property('value');
@@ -52,6 +63,7 @@ export async function initializeProjectList() {
     updateMapList(listProjects[0].id);
 
     initializePeriodicCheckButtonControls();
+    initializeQuestionsList();
 }
 
 async function updateMapList(selectedProject) {
@@ -138,6 +150,23 @@ async function initializePeriodicCheckButtonControls() {
     });
 }
 
+function initializeQuestionsList() {
+    let comments = [
+        "você poderia detalhar um pouco mais sua resposta?",
+        "daria para explicar um pouco mais?",
+        "se der, fala mais um pouco sobre sua resposta?",
+        "tu poderia dar mais detalhes sobre tua resposta?",
+        "humm, fiquei com algumas dúvidas sobre sua resposta, poderia dar mais detalhes?",
+        "dá um pouquinho mais de detalhes aqui, por favor.",
+    ];
+    const questions = d3.select("#questions-list");
+    questions.text(comments.join("\n"));
+    // questions.on("change", () => {
+    //     const updatedQuestions = d3.select("#questions-list");
+    //     console.log(updatedQuestions.node().value)
+    // });
+}
+
 function startPeriodicCheck() {
     let button = d3.select("#periodic-check-button");
     let selectedDivPoint = localStorage.getItem("selectedDivPoint");
@@ -177,6 +206,7 @@ function statusUpdate() {
 }
 
 async function checkParentComments(divPointId) {
+    randomComment();
     const questionReport = await getCommentsGroupedByQuestionReport(accessToken, divPointId);
     questionReport.forEach(question => {
         const questionId = question.id;
@@ -193,14 +223,8 @@ async function checkParentComments(divPointId) {
 }
 
 function randomComment() {
-    let comments = [
-        "você poderia detalhar um pouco mais sua resposta?",
-        "daria para explicar um pouco mais?",
-        "se der, fala mais um pouco sobre sua resposta?",
-        "tu poderia dar mais detalhes sobre tua resposta?",
-        "humm, fiquei com algumas dúvidas sobre sua resposta, poderia dar mais detalhes?",
-        "dá um pouquinho mais de detalhes aqui, por favor.",
-    ];
+    let comments = d3.select("#questions-list").node().value.split("\n");
+    console.log(comments);
     let randomIndex = Math.floor(Math.random() * comments.length);
     return comments[randomIndex];
 }

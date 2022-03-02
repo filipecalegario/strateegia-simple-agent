@@ -32,6 +32,22 @@ export async function getAllProjects(token) {
     return data;
 }
 
+export async function getSummaryProjectsByUser(token) {
+
+    const response = await fetch(`${API_URL_PROJECTS}project/summary?size=5000`, {
+        method: 'get',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        }
+    });
+
+    const data = await response.json();
+
+    return data;
+}
+
+
 export async function getProjectById(token, projectId) {
 
     const response = await fetch(`${API_URL_PROJECTS}project/${projectId}`, {
